@@ -1,0 +1,3 @@
+Day 1: 24 Jan 2024
+- Open Aws account
+- Vim introduction
