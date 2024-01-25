@@ -18,8 +18,8 @@
 10. u - undo changes
 11. yy - copy line
 12. p - paste line
-13. V - enable visual mode( allows you to select bluk of lines)
-14. O - add new empty line above cursor
+13. V - enable visual-line mode( allows you to select bluk of lines) and small (v) enable only visual mode
+14. O - add new empty line above cursor and i=enable insert mode
 15. W - move cursor from one blank space to another blank space forward (from one word to another word)
 16. B - move cursor from one blank space to another blank space backward
 17. :1 - move cursor to 1st line
@@ -27,26 +27,32 @@
 19. 0 (Zero) - move cursor to beginig pf line
 20. % - mover cursro from start of brcket to end of bracket(closing bracket) code
 ```JS
-      - Note - for example my cursor on line 30({) at curly braces({}) if i press 'ctrl + % ' then it move cursor to line 41  (};)
-        const initState = {
-          redeemHistory: [],
-          activeColumn: {
-            columnName: 'DATE',
-            orderAsc: false,
-          },
-          limit: 20,
-          paginationHtml: '',
-          paginationUrl: '',
-          resendMessagePopup: {},
-          emailMessagePopup: {},
-        };
+      - Note - for example my cursor is on line 30({) at curly braces({}) if i press 'ctrl + % ' then it move cursor to line 41  (};)
+      30. const initState = {
+            redeemHistory: [],
+            activeColumn: {
+              columnName: 'DATE',
+              orderAsc: false,
+            },
+            limit: 20,
+            paginationHtml: '',
+            paginationUrl: '',
+            resendMessagePopup: {},
+            emailMessagePopup: {},
+      41.  };
 ```
 21. d% - delte block of code
 ```JS
   const initState = ;
 ```
 22. dw - delete word or cut word can be paste after
-23. ct and till what  - delete block of code between brackets code = { 'something' } on same line only
+23. ct and till what  - delete block of code between brackets works on same line only
+```js
+  code = { Hey plz delete me } 
+  ex- i want to delete line between two curly braces cmd is (till what means upto closing culry bracket '}')
+  cmd is => ct} => output is code = {  } // and enable insert mode 
+
+```
 - note :- If i want to delete code from curly braces then i pres c+t+}(closing curly bracket) workes on same line only not on multiple lines 
 ```js
   const obj = { state, action} - //works for this
@@ -63,6 +69,9 @@
 28. X(cap) - delete letter before the cursor - eg Yogesh delete s if my cursor is on h
 29. ~ - make letter capital if letter is small and vise versa
 30. n(number eg 1 or 4 or 5 )~ - change whatever number you provide make it capital if its small and vise a versa
+```js
+    "4~" output is => make 4 letter capital of word yogesh => 'YOGEsh'
+```
 31. cw - delete word and put you to insert mode
 32. cw and . - delete the word and put you in insert word if u want to do same changes on another line then press .(dot)
 33. C - delete whole line and put into insert mode
