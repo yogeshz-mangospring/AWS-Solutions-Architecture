@@ -1,3 +1,6 @@
 Day 1: 24 Jan 2024
 - Open Aws account
 - Vim introduction
+
+Day 2: 25 Jan 2024
+- Vim tutorial (remainig 20min lect)

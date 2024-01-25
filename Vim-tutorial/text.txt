@@ -1,0 +1,626 @@
+/* eslint-disable no-nested-ternary */
+/* eslint-disable radix */
+import React, { useEffect, useReducer, useRef } from 'react';
+import '../../stylesheet/index.sass';
+import Popup from '../../common/popup';
+import { usePrevious } from '../../util';
+import ToolTip from '../../common/tooltip';
+
+const tableColumns = {
+  ORDER_ID: 'ID',
+  DATE: 'Date',
+  VALUE: 'Value',
+  VALUE_USD: 'Value (USD)',
+  GIFT_ITEM: 'Gift Item',
+  DATA_SOURCE: 'Data Source',
+  SHIPPING_ADDRESS: 'Shipping Address',
+  REDEEM_BY: 'Redeemed By',
+};
+
+const initState = {
+  redeemHistory: [],
+  activeColumn: {
+    columnName: 'DATE',
+    orderAsc: false,
+  },
+  limit: 20,
+  paginationHtml: '',
+  paginationUrl: '',
+  resendMessagePopup: {},
+  emailMessagePopup: {},
+};
+
+const initReducer = (state, action) => {
+  switch (action.type) {
+    case 'SET_REDEEM_HISTORY':
+      return {
+        ...state,
+        redeemHistory: action.payload,
+      };
+    case 'SET_ACTIVE_COLUMN':
+      const { columnName, dbColumnName } = action.payload;
+      return {
+        ...state,
+        activeColumn: {
+          columnName,
+          dbColumnName,
+          orderAsc: state.activeColumn.columnName === columnName ? !state.activeColumn.orderAsc : true,
+        },
+      };
+    case 'SET_PAGINATION_LIMIT':
+      return {
+        ...state,
+        limit: action.payload,
+      };
+    case 'SET_PAGINATION_HTML':
+      return {
+        ...state,
+        paginationHtml: action.payload,
+      };
+    case 'SET_PAGINATION_URL':
+      return {
+        ...state,
+        paginationUrl: action.payload,
+      };
+    case 'SET_RESEND_MESSAGE_POPUP':
+      return {
+        ...state,
+        resendMessagePopup: {
+          ...state.resendMessagePopup,
+          ...action.payload,
+        },
+      };
+    case 'SET_EMAIL_MESSAGE_POPUP':
+      return {
+        ...state,
+        emailMessagePopup: {
+          ...state.emailMessagePopup,
+          ...action.payload,
+        },
+      };
+    default:
+      return state;
+  }
+};
+
+function OrderHistoryView({
+  data: {
+    columns, year, userId, searchValue, catalogType, isSummaryWidget,
+  },
+  isPopUp,
+}) {
+  const [state, dispatch] = useReducer(initReducer, initState);
+  const {
+    redeemHistory,
+    activeColumn: { columnName, dbColumnName, orderAsc },
+    limit, paginationHtml, paginationUrl, resendMessagePopup, emailMessagePopup,
+  } = state;
+  const paginationRef = useRef();
+  const prevSearchValue = usePrevious(searchValue, '');
+  const prevLimit = usePrevious(limit, '');
+  const prevDbColumnName = usePrevious(dbColumnName, '');
+  const prevOrder = usePrevious(orderAsc, '');
+  const prevYear = usePrevious(year, '');
+
+  useEffect(() => {
+    MangoSpring.showWaitPanel();
+    let url = new URL(`${window.location.origin}/api/v2/recognitions/domain_redeem_history.json`);
+    if (paginationUrl) {
+      url = new URL(paginationUrl);
+    }
+    if (dbColumnName) {
+      url.searchParams.append('order_by', `${dbColumnName} ${orderAsc ? 'asc' : 'desc'}`);
+    }
+
+    if (isPopUp) {
+      if (url.searchParams.has('ts')) {
+        url.searchParams.set('ts', new Date().getTime());
+      } else {
+        url.searchParams.append('ts', new Date().getTime());
+      }
+    }
+
+    searchValue = searchValue && searchValue.trim();
+
+    if (prevSearchValue !== searchValue
+      || prevLimit !== limit
+      || prevDbColumnName !== dbColumnName
+      || prevOrder !== orderAsc
+      || prevYear !== year) {
+      url.searchParams.delete('page');
+    }
+
+    if (searchValue) {
+      if (!url.searchParams.has('query')) {
+        url.searchParams.append('query', searchValue);
+      } else {
+        url.searchParams.set('query', searchValue);
+      }
+    } else {
+      url.searchParams.delete('query');
+    }
+
+    if (!url.searchParams.has('limit')) {
+      url.searchParams.append('limit', limit);
+    } else {
+      url.searchParams.set('limit', limit);
+    }
+
+    if (year) {
+      if (!url.searchParams.has('year')) {
+        url.searchParams.append('year', year);
+      } else {
+        url.searchParams.set('year', year);
+      }
+    }
+
+    if (userId) {
+      if (!url.searchParams.has('userId')) {
+        url.searchParams.append('userId', userId);
+      } else {
+        url.searchParams.set('userId', userId);
+      }
+    }
+
+    dispatch({ type: 'SET_REDEEM_HISTORY', payload: [] });
+
+    fetch(url.href, {
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    }).then((res) => res.json())
+      .then((res) => {
+        MangoSpring.hideWaitPanel();
+        if (res.ms_response) {
+          const { redemption_history, pagination } = res.ms_response;
+          dispatch({ type: 'SET_REDEEM_HISTORY', payload: redemption_history });
+          dispatch({ type: 'SET_PAGINATION_HTML', payload: pagination });
+        }
+      }).catch(() => {
+        MangoSpring.hideWaitPanel();
+      });
+  }, [state.activeColumn, searchValue, limit, paginationUrl, year]);
+
+  useEffect(() => {
+    if (paginationRef.current) {
+      paginationRef.current.addEventListener('click', (e) => {
+        e.preventDefault();
+        if (e.target.href) {
+          dispatch({ type: 'SET_PAGINATION_URL', payload: e.target.href });
+        }
+      });
+    }
+  }, [paginationHtml]);
+
+  const handleActive = (activeColumnName, column) => () => {
+    if (length > 1) { return; }
+    dispatch({
+      type: 'SET_ACTIVE_COLUMN',
+      payload: {
+        columnName: activeColumnName,
+        dbColumnName: column,
+      },
+    });
+  };
+
+  const handleLimit = (length > 1) => {
+    dispatch({ type: 'SET_PAGINATION_LIMIT', payload: e.currentTarget.value });
+  };
+
+  const handleShowResendMessagePopuplength > 1= (orderId, redeemHistoryItem) => (e) => {
+    e.preventDefault();
+    dispatch({
+      type: 'SET_RESEND_MESSAGE_POPUP',
+      payload: {
+        isOpen: true,
+        orderId,
+        redeemHistoryItem,
+      },
+    });
+  };
+
+  const handleResendMessage = () => {
+    MangoSpring.showWaitPanel();
+    const { orderId, redeemHistoryItem } = resendMessagePopup;
+    dispatch({
+      type: 'SET_RESEND_MESSAGE_POPUP',
+      payload: { disableBtn: true, redeemHistoryItem },
+    });
+    fetch(`/api/v2/recognitions/${orderId}/resend_redeemption_message.json`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'appliation/json',
+      },
+    }).then((res) => res.json())
+      .then((res) => {
+        MangoSpring.hideWaitPanel();
+        if (res.ms_response) {
+          const { message } = res.ms_response;
+          MangoSpring.showGlobalSuccess(message);
+          dispatch({
+            type: 'SET_RESEND_MESSAGE_POPUP',
+            payload: { disableBtn: false, isOpen: false },
+          });
+        } else {
+          const { error: { message } } = res.ms_errors;
+          MangoSpring.showGlobalError(message);
+          dispatch({
+            type: 'SET_RESEND_MESSAGE_POPUP',
+            payload: { disableBtn: false },
+          });
+        }
+      }).catch(() => {
+        MangoSpring.hideWaitPanel();
+      });
+  };
+
+  const hideResendMessagePopup = () => {
+    dispatch({
+      type: 'SET_RESEND_MESSAGE_POPUP',
+      payload: {
+        isOpen: false,
+      },
+    });
+  };
+
+  const hideSendEmailPopup = () => {
+    dispatch({
+      type: 'SET_EMAIL_MESSAGE_POPUP',
+      payload: {
+        isOpen: false,
+      },
+    });
+  };
+
+  const handleSendOrderDetailsEmail = () => {
+    dispatch({
+      type: 'SET_EMAIL_MESSAGE_POPUP',
+      payload: {
+        disableBtn: true,
+      },
+    });
+    MangoSpring.showWaitPanel();
+    fetch(`${window.location.origin}/api/v2/recognitions/send_reward_redeem_email`, {
+      method: 'post',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        order_id: emailMessagePopup.orderDetails.id,
+        email_id: emailMessagePopup.email,
+      }),
+    }).then((res) => res.json())
+      .then((res) => {
+        MangoSpring.hideWaitPanel();
+        if (res.ms_response) {
+          const { message } = res.ms_response;
+          dispatch({
+            type: 'SET_EMAIL_MESSAGE_POPUP',
+            payload: {
+              isOpen: false,
+              disableBtn: false,
+            },
+          });
+          MangoSpring.showGlobalSuccess(message);
+        } else {
+          const { error: { message } } = res.ms_errors;
+          MangoSpring.showGlobalError(message);
+          dispatch({
+            type: 'SET_EMAIL_MESSAGE_POPUP',
+            payload: {
+              disableBtn: false,
+            },
+          });
+        }
+      }).catch(() => {
+        MangoSpring.hideWaitPanel();
+      });
+  };
+
+  const handleEmptyRecords = () => {
+    if (isSummaryWidget) {
+      return (
+        <>
+          <svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" fill="none">
+            <rect width="80" height="80" rx="40" fill="#F8F8F8" style={{ fill: '#F8F8F8' }} />
+            <path d="m39.875 30.668 2.227-3.633a4.92 4.92 0 0 1 4.16-2.285h.175a4.701 4.701 0 0 1 4.688 4.688c0 1.113-.352 2.05-.938 2.812H53c2.05 0 3.75 1.7 3.75 3.75v15c0 2.11-1.7 3.75-3.75 3.75H26.75C24.64 54.75 23 53.11 23 51V36c0-2.05 1.64-3.75 3.75-3.75h2.754c-.586-.762-.879-1.7-.879-2.813a4.664 4.664 0 0 1 4.688-4.687h.117c1.699 0 3.28.879 4.16 2.285l2.285 3.633Zm6.387-4.043c-1.055 0-1.992.586-2.578 1.406l-2.637 4.219h5.39a2.813 2.813 0 0 0 2.813-2.813c0-1.523-1.29-2.812-2.813-2.812h-.175Zm-7.617 5.625-2.637-4.219c-.586-.82-1.524-1.406-2.578-1.406h-.117a2.813 2.813 0 0 0-2.813 2.813 2.777 2.777 0 0 0 2.813 2.812h5.331ZM26.75 34.125c-1.055 0-1.875.879-1.875 1.875v5.625h30V36c0-.996-.879-1.875-1.875-1.875H41.867l3.399 4.102c.293.41.293.996-.118 1.347-.41.293-.996.235-1.347-.117l-3.926-4.805-3.984 4.805c-.352.352-.938.41-1.348.117-.41-.351-.41-.937-.117-1.347l3.398-4.102H26.75ZM24.875 43.5v3.75h30V43.5h-30Zm30 7.5v-1.875h-30V51c0 1.055.82 1.875 1.875 1.875H53c.996 0 1.875-.82 1.875-1.875Z" fill="#474747" />
+          </svg>
+          <p className="grey-text top-10">{_i18n_bkp('No redemption done yet')}</p>
+        </>
+      );
+    }
+    if (isPopUp) {
+      return (
+        <>
+          <svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" fill="none">
+            <rect width="80" height="80" fill="#F8F8F8" rx="40" style={{ fill: '#F8F8F8' }} />
+            <path fill="#474747" d="M55.695 44.32c-.586-.527-1.289-.761-2.05-.761-.762 0-1.465.234-2.051.703l-3.575 2.87c-.117.118-.292.118-.41.118h-2.46c.292-.527.41-1.172.292-1.875-.234-1.64-1.757-2.813-3.398-2.813h-8.438c-1.23 0-2.343.41-3.398 1.172l-2.227 1.641h-4.043c-.527 0-.937.469-.937.938 0 .527.41.937.879.937h4.687l2.696-2.11a4.04 4.04 0 0 1 2.285-.703h8.613c.762 0 1.406.586 1.406 1.407 0 .761-.644 1.406-1.406 1.406h-5.156a.926.926 0 0 0-.938.938c0 .468.41.937.938.937H47.55c.527 0 1.113-.234 1.523-.586l3.633-2.871c.234-.176.586-.293.879-.293.293 0 .586.117.762.293a1.243 1.243 0 0 1 0 1.934l-5.918 4.687c-.47.352-.996.586-1.582.586h-22.91a.926.926 0 0 0-.938.938c0 .468.41.937.879.937h22.969c.996 0 1.933-.293 2.754-.938l5.918-4.746c.703-.527 1.113-1.406 1.113-2.343.117-.88-.293-1.758-.938-2.403Zm-23.32-4.57h14.941c2.051 0 3.692-1.64 3.692-3.75v-7.5c0-2.05-1.7-3.75-3.692-3.75H32.375c-2.11 0-3.75 1.7-3.75 3.75V36c0 2.11 1.64 3.75 3.75 3.75Zm4.688-13.125h5.624v4.16c-.644-.351-1.406-.703-2.402-1.23a1.143 1.143 0 0 0-.879 0l-2.343 1.23v-4.16ZM30.5 28.5c0-.996.82-1.875 1.875-1.875h2.813v5.625c0 .352.117.645.41.82.175.117.351.117.527.117.117 0 .234 0 .41-.058l3.34-1.7c.762.41 2.46 1.29 3.105 1.583.293.351 1.348.175 1.524-.528a.647.647 0 0 0 0-.468v-5.391h2.871c.996 0 1.875.879 1.875 1.875V36c0 1.055-.879 1.875-1.875 1.875h-15A1.851 1.851 0 0 1 30.5 36v-7.5Z" />
+          </svg>
+          <p className="grey-text top-10">{_i18n_bkp('No order history')}</p>
+        </>
+      );
+    }
+
+    return (
+      <>
+        <svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" fill="none">
+          <rect width="80" height="80" rx="40" fill="#F8F8F8" style={{ fill: '#F8F8F8' }} />
+          <path d="m39.875 30.668 2.227-3.633a4.92 4.92 0 0 1 4.16-2.285h.175a4.701 4.701 0 0 1 4.688 4.688c0 1.113-.352 2.05-.938 2.812H53c2.05 0 3.75 1.7 3.75 3.75v15c0 2.11-1.7 3.75-3.75 3.75H26.75C24.64 54.75 23 53.11 23 51V36c0-2.05 1.64-3.75 3.75-3.75h2.754c-.586-.762-.879-1.7-.879-2.813a4.664 4.664 0 0 1 4.688-4.687h.117c1.699 0 3.28.879 4.16 2.285l2.285 3.633Zm6.387-4.043c-1.055 0-1.992.586-2.578 1.406l-2.637 4.219h5.39a2.813 2.813 0 0 0 2.813-2.813c0-1.523-1.29-2.812-2.813-2.812h-.175Zm-7.617 5.625-2.637-4.219c-.586-.82-1.524-1.406-2.578-1.406h-.117a2.813 2.813 0 0 0-2.813 2.813 2.777 2.777 0 0 0 2.813 2.812h5.331ZM26.75 34.125c-1.055 0-1.875.879-1.875 1.875v5.625h30V36c0-.996-.879-1.875-1.875-1.875H41.867l3.399 4.102c.293.41.293.996-.118 1.347-.41.293-.996.235-1.347-.117l-3.926-4.805-3.984 4.805c-.352.352-.938.41-1.348.117-.41-.351-.41-.937-.117-1.347l3.398-4.102H26.75ZM24.875 43.5v3.75h30V43.5h-30Zm30 7.5v-1.875h-30V51c0 1.055.82 1.875 1.875 1.875H53c.996 0 1.875-.82 1.875-1.875Z" fill="#474747" />
+        </svg>
+        <p className="grey-text top-10">{_i18n_bkp('redeem_history_order_view')}</p>
+      </>
+    );
+  };
+
+  const tableHeaders = Object.keys(tableColumns);
+  if (isSummaryWidget) {
+    const temp = tableHeaders[0];
+    tableHeaders[0] = tableHeaders[1];
+    tableHeaders[1] = temp;
+  }
+
+  const hideColumns = ['VALUE_USD', 'DATA_SOURCE', 'SHIPPING_ADDRESS'];
+  return (
+    <div className={isSummaryWidget ? 'redeemption-history-widget' : ''}>
+      <table cellPadding="0" cellSpacing="0" width="100%" className="redeem-history-table full-width ma-table table-layt-fixed">
+        <thead className="ma-h5">
+          <tr>
+            {
+              tableHeaders.map((item, index) => columns[index] && (
+                <th style={{ width: '115px' }} onClick={item !== tableHeaders[6] && handleActive(item, columns[index])} className={`middle ${item !== tableHeaders[6] ? 'pointer' : ''} ma-h5 ${columnName === item ? 'current' : ''} ${catalogType === 'C' ? hideColumns.includes(item) ? 'hide' : '' : ''}`}>
+                  <div className="ms-flex justify-content-between align-items-center">
+                    <span>{_i18n_bkp(tableColumns[item])}</span>
+                    {
+                      columnName === item && <i className={`fa-solid fa-caret-${orderAsc ? 'up' : 'down'}`} />
+                    }
+                  </div>
+                </th>
+              ))
+            }
+            {catalogType === 'M' && (
+              <th className="middle ma-h5" style={{ width: '80px' }}>{_i18n_bkp('Action')}</th>
+            )}
+          </tr>
+        </thead>
+        <tbody>
+          {
+            redeemHistory.length
+              ? redeemHistory.map((item) => (
+                <tr key={item.reference_order_id}>
+                  {
+                    isSummaryWidget ? (
+                      <>
+                        <td>{window.MangoSpring.domainDateFormat(parseInt(item.created_at) * 1000)}</td>
+                        { item.reference_order_id ? (<td className="history-texttruncate" style={{ width: '170px' }} title={item.reference_order_id}>{item.reference_order_id}</td>) : <td>-</td>}
+                      </>
+                    )
+                      : (
+                        <>
+                          { item.reference_order_id ? (<td style={{ width: '170px' }} title={item.reference_order_id}>{item.reference_order_id}</td>) : <td>-</td>}
+                          <td>{window.MangoSpring.domainDateFormat(parseInt(item.created_at) * 1000)}</td>
+                        </>
+                      )
+                  }
+
+                  {catalogType === 'M'
+                    ? (
+                      <td style={{ minWidth: '80px' }}>
+                        {!item.amount && (item.order_type === 'TR' || item.order_type === '-')
+                          ? `${item.points_used} ${_i18n_bkp('Points')}`
+                          : `${item.currency_symbol}${item.amount} (${item.amount * item.unit} ${_i18n_bkp('Points')})`}
+                      </td>
+                    )
+                    : item.amount ? (<td style={{ minWidth: '80px' }}>{item.amount}</td>) : <td>-</td>}
+                  {catalogType === 'M' && (item.order_type === 'TO'
+                    ? (
+                      <td>
+                        <div className="ms-flex">
+                          {`$${item.total_amount}`}
+                          {item.currency !== 'USD' ? <ToolTip title={`1.00 US Dollar = ${item.exchange_rate} ${item.currency}`} style={{ maxWidth: '200px' }} /> : ''}
+                        </div>
+                      </td>
+                    ) : <td>-</td>)}
+                  {item.card_name ? (<td className="history-texttruncate" title={MangoSpring.desanitizeString(item.card_name)} dangerouslySetInnerHTML={{ __html: item.card_name }} />) : <td>-</td>}
+                  {catalogType === 'M' && (
+                  <td className="history-texttruncate" style={{ width: '170px' }} title={item.title ? item.title : '-'}>
+                    {item.title ? item.title : '-'}
+                  </td>
+                  )}
+                  {catalogType === 'M' && (
+                  <td>
+                    <div className="ms-flex">
+                      {item.shipping_address && item.shipping_address !== '-' ? (
+                        <div className="ms-flex">
+                          <span>Yes</span>
+                          <ToolTip title={`${item.shipping_address.line1} ${item.shipping_address.line_2} ${item.shipping_address.city} ${item.shipping_address.state} ${item.shipping_address.zip}, ${item.shipping_address.country} `} style={{ maxWidth: '300px' }} />
+                        </div>
+                      ) : (
+                        <div>
+                          No
+                        </div>
+                      )}
+
+                    </div>
+                  </td>
+                  )}
+                  {columns.include('user_name') && (
+                    <td className="history-texttruncate" title={item.redeemed_by}>
+                      {item.redeemed_by ? (<div>{item.redeemed_by}</div>) : <div>-</div>}
+                      {item.order_type !== '-' && item.on_behalf_of_user ? <span>{`${_i18n_bkp('On behalf of')}: ${item.on_behalf_of_name}`}</span> : ''}
+                    </td>
+                  )}
+                  {catalogType === 'M' && isSummaryWidget && item.user_state === 'A' ? (
+                    <td style={{ width: '80px' }}>
+                      <a href="javascript:void(0);" onClick={handleShowResendMessagePopup(item.id, item)}>{_i18n_bkp('Resend Message')}</a>
+                    </td>
+                  )
+                    : catalogType === 'M' && (
+                      item.reference_order_id !== '-'
+                        ? (
+                          <td className="relative">
+                            <div className="ms-more-actions static redeemed-history-actions">
+                              <ul className="narrow_by hand btn relative" onClick={(e) => mangofiles.narrow_by(e, e.currentTarget)}>
+                                <li className="label relative">
+                                  <span><i className="far fa-ellipsis-v" /></span>
+                                  <ul className="trackerBox" style={{ display: 'none', right: 1 }}>
+                                    {item.user_state === 'A' && <li><a href="javascript:void(0);" onClick={handleShowResendMessagePopup(item.id, item)}>{_i18n_bkp('Resend Message')}</a></li>}
+                                    <li>
+                                      <a
+                                        href="javascript:void(0);"
+                                        onClick={(e) => {
+                                          e.preventDefault();
+                                          dispatch({
+                                            type: 'SET_EMAIL_MESSAGE_POPUP',
+                                            payload: {
+                                              isOpen: true,
+                                              orderDetails: item,
+                                              disableBtn: !(item.user_state === 'A' && item.email_id.length),
+                                              email: item.user_state === 'A' ? item.email_id : '',
+                                            },
+                                          });
+                                        }}
+                                      >
+                                        {_i18n_bkp('Send to Email Address')}
+                                      </a>
+                                    </li>
+                                  </ul>
+                                </li>
+                              </ul>
+                            </div>
+                          </td>
+                        ) : <td>-</td>
+                    )}
+                </tr>
+              ))
+              : (
+                <tr>
+                  <td colSpan={catalogType === 'M' ? 9 : 5} style={{ height: (isSummaryWidget || isPopUp) ? '290px' : 'calc(100vh - 460px)', border: 0 }}>
+                    <div className="ms-flex flex-column justify-content-center align-items-center">
+                      {handleEmptyRecords()}
+                    </div>
+                  </td>
+                </tr>
+              )
+          }
+        </tbody>
+      </table>
+
+      {redeemHistory.length ? (
+        <div className="pagination_top admin-list top-20 bottom-30 clearfix left-p-15">
+          <div className="left right_spacing right-10">
+            <span className="right_spacing right-10">{_i18n_bkp('View')}</span>
+            <select className="log-selectbox trash-selectbox" value={limit} onChange={handleLimit} style={{ width: 65, textAlign: 'start' }}>
+              <option selected="selected" value="20">20</option>
+              <option value="50">50</option>
+              <option value="100">100</option>
+              <option value="200">200</option>
+              <option value="500">500</option>
+              <option value="1000">1000</option>
+            </select>
+          </div>
+
+          <div className="right right_spacing campaigns_pagination">
+            <div ref={paginationRef} dangerouslySetInnerHTML={{ __html: paginationHtml }} />
+          </div>
+        </div>
+      ) : null}
+      {resendMessagePopup.isOpen && (
+        <Popup
+          title={_i18n_bkp('Resend Message')}
+          body={(
+            <div>
+              {_i18n_bkp('private_msg_resend_body1')}
+              {' '}
+              <strong>
+                {resendMessagePopup.redeemHistoryItem.redeemed_by}
+                {resendMessagePopup.redeemHistoryItem.on_behalf_of_user ? (
+                  <span>
+                    ,
+                    {(resendMessagePopup.redeemHistoryItem.on_behalf_of_name).trim()}
+                  </span>
+                ) : ''}
+              </strong>
+              .
+              <span className="left-5">{_i18n_bkp('private_msg_resend_body2')}</span>
+            </div>
+          )}
+          style={{ width: 512 }}
+          hidePopup={hideResendMessagePopup}
+          buttons={(
+            <>
+              <button onClick={hideResendMessagePopup} className="actionbutton submit_button waves-effect waves-light" type="button">{_i18n_bkp('Cancel')}</button>
+              <button onClick={handleResendMessage} disabled={resendMessagePopup.disableBtn} className="actionbutton actionblue submit_button waves-effect waves-light" type="button">{_i18n_bkp('Yes, Resend')}</button>
+            </>
+          )}
+        />
+      )}
+      {emailMessagePopup.isOpen && (
+        <Popup
+          title={_i18n_bkp('Send Gift Card')}
+          body={(
+            <div>
+              <div className="ms-flex justify-content-between bottom-30 order-details-wrapper padding-15">
+                <div className="ms-flex align-items-center">
+                  <div className="card-logo right-10">
+                    {emailMessagePopup.orderDetails.card_logo
+                      ? (<img src={emailMessagePopup.orderDetails.card_logo} alt="card_logo" />)
+                      : (<img src="/images/resource_reservation.png" alt="gift_card_logo" />)}
+                  </div>
+                  <div className="ms-flex flex-column order-info">
+                    <h4 className="bottom-8">{emailMessagePopup.orderDetails.reference_order_id}</h4>
+                    <span style={{ fontSize: 12, lineHeight: '14px' }}>{`${_i18n_bkp('Issued On')}: ${window.MangoSpring.domainDateFormat(parseInt(emailMessagePopup.orderDetails.created_at) * 1000)}`}</span>
+                    <span className="fw-600 top-5" dangerouslySetInnerHTML={{ __html: emailMessagePopup.orderDetails.card_name }} />
+                  </div>
+                </div>
+                {!emailMessagePopup.orderDetails.amount && (emailMessagePopup.orderDetails.order_type === 'TR' || emailMessagePopup.orderDetails.order_type === '-')
+                  ? (
+                    <h4>
+                      {emailMessagePopup.orderDetails.points_used}
+                      {' '}
+                      {_i18n_bkp('Points')}
+                    </h4>
+                  )
+                  : (
+                    <h4>{`${emailMessagePopup.orderDetails.currency_symbol}${emailMessagePopup.orderDetails.amount} (${parseInt(emailMessagePopup.orderDetails.amount) * parseInt(emailMessagePopup.orderDetails.unit)} ${_i18n_bkp('Points')})`}</h4>
+                  )}
+              </div>
+              <div className="ms-flex flex-column">
+                <span className="bottom-5 ms-flex align-items-center">
+                  {_i18n_bkp('Send to Email Address')}
+                  <span className="redtext">*</span>
+                  <ToolTip title={_i18n('Any valid email address can be provided. Only one email can be entered here')} style={{ maxWidth: '300px', bottom: '5px', left: '5px' }} />
+                  {' '}
+                </span>
+                <input
+                  type="text"
+                  onInput={(e) => {
+                    dispatch({
+                      type: 'SET_EMAIL_MESSAGE_POPUP',
+                      payload: {
+                        email: e.currentTarget.value,
+                        disableBtn: !e.currentTarget.value.trim().length,
+                      },
+                    });
+                  }}
+                  placeholder={_i18n_bkp('Enter email address')}
+                  value={emailMessagePopup.email}
+                />
+              </div>
+            </div>
+          )}
+          style={{ width: 540 }}
+          hidePopup={hideSendEmailPopup}
+          buttons={(
+            <>
+              <button onClick={hideSendEmailPopup} className="actionbutton submit_button waves-effect waves-light" type="button">{_i18n_bkp('Cancel')}</button>
+              <button onClick={handleSendOrderDetailsEmail} disabled={emailMessagePopup.disableBtn} className="actionbutton actionblue submit_button waves-effect waves-light left-10" type="button">{_i18n_bkp('Send Email')}</button>
+            </>
+          )}
+        />
+      )}
+    </div>
+  );
+}
+
+export default OrderHistoryView;
+
