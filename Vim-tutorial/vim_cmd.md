@@ -47,6 +47,7 @@
 ```
 22. dw - delete word or cut word can be paste after
 23. ct and till what  - delete block of code between brackets works on same line only
+- Note:- Works on same line only
 ```js
   code = { Hey plz delete me } 
   ex- i want to delete line between two curly braces cmd is (till what means upto closing culry bracket '}')
@@ -79,3 +80,29 @@
 35. '>>' - intend code/line forward or move line forward like tab button
 36. qw - start recording
 37. q - stop recording when u are in recording mode
+38. d and till what - delete code between two things
+- Note: its works for multiple file code
+```js
+  const arry =[
+    one
+    two
+    one
+    two 
+    one
+    two
+    one
+    two
+    one
+    two
+    one
+    two
+  ]
+
+  want to delete this code between two brackets cmd is => d] // bcz i want to delete code between [](sq brackets)
+```
+39. /string - search word 
+40. vim -o file1 file2 - open both file at a same time side by side 
+41. vim -d file1 file2- oepn both file at a same time in column format
+42. ctrl + w - switch between two files  which are opened using above command
+43. %s/old/new/g - replace all occurance of old with new in current document
+44. :%s/old/new/gc - it will ask for confirmation before replacing each occurance of old with new in current document
