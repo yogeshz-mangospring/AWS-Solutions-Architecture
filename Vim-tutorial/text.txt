@@ -39,7 +39,7 @@ const initReducer = (state, action) => {
       };
     case 'SET_ACTIVE_COLUMN':
       const { columnName, dbColumnName } = action.payload;
-      return {
+      return {`
         ...state,
         activeColumn: {
           columnName,
