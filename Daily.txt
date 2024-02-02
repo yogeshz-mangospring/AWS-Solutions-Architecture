@@ -4,3 +4,11 @@ Day 1: 24 Jan 2024
 
 Day 2: 25 Jan 2024
 - Vim tutorial (remainig 20min lect)
+
+Day 3: 1 Feb 2024
+- Bash
+  - functions
+  - if elif
+  - case
+  - for loop
+  -while loop
