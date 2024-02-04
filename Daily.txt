@@ -11,4 +11,15 @@ Day 3: 1 Feb 2024
   - if elif
   - case
   - for loop
-  -while loop
+  - while loop
+
+Day 4: 4 Feb 2024
+- User account Management
+  - useradd
+  - usermod
+  - userdel
+  - create admin user
+  - groupadd
+  - gropupmod
+  - groupdel
+  - whoami, who am i, id, w, groups 
