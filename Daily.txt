@@ -23,3 +23,23 @@ Day 4: 4 Feb 2024
   - gropupmod
   - groupdel
   - whoami, who am i, id, w, groups 
+
+Day 5: 8 Feb 2024
+  - Process Management
+
+Day 6: 9 Feb 2024 
+  - Process Management
+  - Networking
+    - ifconfig
+    - ip
+    - ssh
+    - route
+    - resolvectl
+
+Day 7: 11 Feb  2024
+  - Networking
+    - rsync
+    - wget
+    - ssh
+    - tenet
+    - nmap
