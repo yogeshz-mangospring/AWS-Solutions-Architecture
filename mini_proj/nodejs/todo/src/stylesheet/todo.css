@@ -1,0 +1,111 @@
+.wrapper {
+  padding: 20px;
+}
+
+.todo-item {
+  border: 1px solid gray;
+  padding: 5px;
+  border-radius: 5px;
+  height: 90px;
+}
+
+.ms-flex {
+  display: flex;
+}
+
+.align-items-center {
+  align-items: center;
+}
+
+.justify-between {
+  justify-content: space-between;
+}
+
+.bottom-0 {
+  margin-bottom: 0 !important;
+}
+
+.top-10 {
+  margin-top: 10px;
+}
+
+.left-5 {
+  margin-left: 5px !important;
+}
+
+.right-5 {
+  margin-right: 5px !important;
+}
+
+.left-10 {
+  margin-left: 10px !important;
+}
+
+.justify-center {
+  justify-content: center;
+}
+
+.justify-end {
+  justify-content: flex-end;
+}
+
+.popup {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 31;
+}
+
+.popup::before {
+    content: "";
+    background: rgba(119, 119, 119, 0.7);
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    right: 0;
+    left: 0;
+    z-index: -1
+}
+
+.popup .dialog-header{
+  background: #1497D5;
+  padding: 7px 15px 6px 15px ;
+}
+
+.popup .dialog-header h3 {
+  background: 0;
+  float: none;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  line-height: 46px;
+  color: #fff;
+}
+
+.popup .dialog-body {
+  max-height: 600px;
+  overflow: auto;
+  padding: 0 !important;
+  margin: 0px!important;
+  background: #fff;
+  border: 1px solid #e5e5e5;
+}
+
+.popup .container-outer {
+  padding: 20px 10px !important;
+}
+
+.popup .dialog-footer {
+  padding: 15px 12px;
+  background: #f4f4f4;
+}
+
+.popup .dialog-header button {
+  color: rgb(255, 255, 255);
+  font-size: 20px;
+  background: transparent;
+  background: rgba(0,0,0,0);
+  border: 0;
+}
